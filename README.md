@@ -1,39 +1,57 @@
 # Skyplay Poster Generator
 
-A free, responsive, Hybridbox-inspired playlist poster editor. This is an independent original implementation, not affiliated with Spotify or Hybridbox.
+A responsive playlist poster editor inspired by the layout of Hybridbox, with an optional Spotify OAuth backend.
 
-## Live website (after enabling Pages)
+## Live frontend
+
 https://heed725.github.io/skyplay_poster_generator/
 
+The GitHub Pages website is static. The Node.js API requires **separate hosting** (e.g. Render). GitHub Pages cannot run Node.js.
+
 ## Features
-- Poster editing and instant live preview
-- Playlist title, artist, year, tracks, and cover image upload
-- Four tabs: Create | Order, Layout & Size, Poster Color, Toggles/Other
-- Classic portrait, A4, square and landscape formats
-- Adjustable margins, artwork sizes, title scaling, track columns
-- Background/text/accent color pickers and suggested palettes
-- Track, year, frame, number, and footer visibility controls
-- Export as PNG or JPG; Print / Save PDF using your browser
-- Save and restore editable JSON projects
 
-## Setup
-No build is necessary. Open `index.html` directly in your browser.
+- Create posters with a live canvas preview, custom layouts, colors and text.
+- Import an owned/collaborative Spotify playlist after signing in with Spotify.
+- Fetch playlist title, creator, cover image and up to 100 tracks.
+- Export PNG and JPG; use Print to save as PDF.
+- Save editable projects locally as JSON.
+- No server-side Spotify credentials are exposed in the browser.
 
-### GitHub Pages
-1. Open the repository **Settings**.
-2. Select **Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select **main** and **/(root)**, then **Save**.
-5. Once deployment finishes, open https://heed725.github.io/skyplay_poster_generator/
+## Deploy the Spotify backend on Render
 
-## Spotify playlist import
-All manual editing functions work on GitHub Pages. **Automatic Spotify playlist import is not included out of the box.** Spotify API credentials must be stored securely on a separate backend (not in browser JavaScript or the repository), and that backend must implement `GET /api/playlist?url=...`. It should return JSON with `title`, `artist`, `tracks` and optional `image`.
+1. Create a Spotify developer app at https://developer.spotify.com/dashboard and obtain the **Client ID** and **Client Secret**. Spotify development mode requires Premium and imposes user restrictions.
+2. Open https://dashboard.render.com/ and create a **New Web Service** linked to `Heed725/skyplay_poster_generator`. Use Node runtime, `npm install` build command, and `npm start` start command. Alternatively deploy using `render.yaml`.
+3. Once Render gives you a hostname (example: `https://YOUR-SERVICE.onrender.com`), configure these **secret environment variables in Render**, not GitHub:
+   - `SPOTIFY_CLIENT_ID` = your Spotify Client ID
+   - `SPOTIFY_CLIENT_SECRET` = your Spotify Client Secret
+   - `PUBLIC_BASE_URL` = your actual Render service HTTPS URL, **without trailing slash**
+   - `FRONTEND_URL` = `https://heed725.github.io/skyplay_poster_generator/`
+4. In Spotify Developer Dashboard > Your app > Settings, set the **Redirect URI** to `https://YOUR-SERVICE.onrender.com/auth/callback`. It must exactly match `PUBLIC_BASE_URL + /auth/callback`.
+5. Deploy/redeploy. Verify `https://YOUR-SERVICE.onrender.com/health` returns `{"ok":true,...,"spotifyConfigured":true}`.
+6. Open Skyplay on GitHub Pages. In the **Create | Order** tab, paste your Render URL into **Skyplay API server URL** and click **Connect Spotify**. Authenticate with an authorized Spotify account, then paste your Spotify playlist URL and click **Import**.
 
-To point the editor to your backend, in the browser developer console run:
-```js
-localStorage.setItem('skyplay_api_url', 'https://YOUR-BACKEND.example.com')
+**Important Spotify restrictions (2026):** Spotify's Development Mode requires Premium and is limited to up to five authorized users. The `GET /playlists/{id}/items` API returns tracks only for playlists the authenticated user owns or collaborates on. An arbitrary public playlist may return 403. A playlist title and artwork may be available even when the tracks are not. Skyplay leaves manual editing available for unsupported playlists.
+
+**Security:** Do not share your Spotify Client Secret, upload `.env` files, or paste credentials into the frontend. Login sessions are stored in server memory, expire after inactivity, and are lost on restart. This is suitable for small hobby deployments rather than production scale. Enable a persistent session store, rate limiting, and monitoring before large public use.
+
+## Run locally
+
+Requires Node.js 20+.
+
+```bash
+npm install
+# Export environment variables from .env.example with your own values
+npm start
 ```
-Then reload. The backend must support HTTPS and CORS from the Pages origin. Spotify API access is subject to Spotify's developer requirements.
 
-## Rights
-Use artwork and music metadata you are allowed to reproduce.
+Open http://127.0.0.1:3000/ and use http://127.0.0.1:3000/auth/callback as your registered redirect URI for local testing (Spotify may require an HTTPS or permitted loopback redirect based on current Spotify settings).
+
+## API
+
+- `GET /health` — check server status
+- `GET /auth/login` — start Spotify authorization
+- `GET /auth/callback` — OAuth redirect
+- `GET /api/playlist?url=...` — playlist details (requires Skyplay session bearer token)
+- `GET /api/artwork?url=...` — permitted Spotify artwork proxy (requires Skyplay session bearer token)
+
+Spotify content must be used in accordance with Spotify's policies, including artwork presentation and attribution. Skyplay is independent of Spotify and Hybridbox.
