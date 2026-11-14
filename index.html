@@ -52,9 +52,11 @@ $("removeCover").onclick=()=>{setCover(null);$("coverInput").value=""};
 $("copyLink").onclick=async()=>{try{await navigator.clipboard.writeText(location.href+"?playlist="+encodeURIComponent(val("playlistUrl")));alert("Page and playlist link copied (your editable design is not hosted).")}catch(e){alert("Copy not available; use the address bar.")}};
 $("saveProject").onclick=save;$("openProject").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{const p=JSON.parse(await f.text());ids.forEach(id=>{if(p[id]===undefined)return;$(id).type==="checkbox"?$(id).checked=!!p[id]:$(id).value=p[id]});setCover(p.coverData||null);draw()}catch(err){alert("Could not open project JSON.")}};
 $("resetBtn").onclick=()=>{if(confirm("Reset your poster design?"))location.reload()};
-function endpoint(){return ($("apiEndpoint").value.trim()||location.origin).replace(/\/$/,"")}
-$("apiEndpoint").value=localStorage.getItem("skyplay_api_url")|| (location.hostname.endsWith("github.io")?"":location.origin);
-$("apiEndpoint").addEventListener("change",()=>localStorage.setItem("skyplay_api_url",endpoint()));
+function endpoint(){return $("apiEndpoint").value.trim().replace(/\/$/,"")}
+function checkEndpoint(api){try{const u=new URL(api);if(!["https:","http:"].includes(u.protocol)||!u.hostname||u.hostname.endsWith("github.io")||u.pathname!=="/")throw Error("invalid");if(u.protocol==="http:"&&!["localhost","127.0.0.1"].includes(u.hostname))throw Error("invalid");return true}catch{return false}}
+const savedApi=localStorage.getItem("skyplay_api_url")||"";
+$("apiEndpoint").value=checkEndpoint(savedApi)?savedApi:(location.hostname.endsWith("github.io")?"":location.origin);
+$("apiEndpoint").addEventListener("change",()=>{const api=endpoint();if(checkEndpoint(api))localStorage.setItem("skyplay_api_url",api)});
 async function apiJSON(url,opts={}) {
 const response=await fetch(url,opts);
 const ct=(response.headers.get("content-type")||"").toLowerCase();
@@ -66,7 +68,7 @@ if(!response.ok)throw Error(data.error||"API returned HTTP "+response.status);
 return data;
 }
 $("testBackend").onclick=async()=>{
-const api=endpoint();localStorage.setItem("skyplay_api_url",api);
+const api=endpoint();if(!checkEndpoint(api)){$("importStatus").textContent="Enter your Render Web Service HTTPS URL (not a github.io address), for example https://your-service.onrender.com";return}localStorage.setItem("skyplay_api_url",api);
 $("importStatus").textContent="Checking "+api+"/health …";
 try{const d=await apiJSON(api+"/health");if(!d.ok)throw Error("Unexpected health response");
 $("importStatus").textContent="Backend is online. Spotify credentials: "+(d.spotifyConfigured?"configured":"MISSING — check Render Environment variables")+".";
@@ -75,11 +77,12 @@ $("importStatus").textContent="Backend is online. Spotify credentials: "+(d.spot
 const fragment=new URLSearchParams(location.hash.replace(/^#/,""));
 if(fragment.get("skyplay_session")){sessionStorage.setItem("skyplay_session",fragment.get("skyplay_session"));$("importStatus").textContent="Spotify connected! Paste a playlist link, then click Import.";history.replaceState(null,"",location.pathname+location.search)}
 if(fragment.get("skyplay_error")){$("importStatus").textContent="Spotify login failed: "+fragment.get("skyplay_error");history.replaceState(null,"",location.pathname+location.search)}
-$("connectSpotify").onclick=()=>{const api=endpoint();if(!/^https?:\/\//.test(api)){ $("importStatus").textContent="Enter the backend URL before connecting.";return}localStorage.setItem("skyplay_api_url",api);location.href=api+"/auth/login"};
+$("connectSpotify").onclick=async()=>{const api=endpoint();if(!checkEndpoint(api)){$("importStatus").textContent="Enter the Render backend HTTPS URL first, not a GitHub Pages URL.";return}localStorage.setItem("skyplay_api_url",api);$("importStatus").textContent="Checking backend before Spotify login…";try{const health=await apiJSON(api+"/health");if(!health.ok||!health.spotifyConfigured)throw Error("Spotify credentials are not configured on the backend.");location.href=api+"/auth/login"}catch(e){$("importStatus").textContent="Cannot connect to Spotify: "+e.message}};
 $("importPlaylist").onclick=async()=>{
 const url=val("playlistUrl"),m=url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
 if(!m){$("importStatus").textContent="Enter a valid Spotify playlist URL.";return}
 const api=endpoint(),session=sessionStorage.getItem("skyplay_session");
+if(!checkEndpoint(api)){$("importStatus").textContent="Enter a valid Render backend URL before importing.";return}
 if(!session){$("importStatus").textContent="Connect your Spotify account first, using the button above.";return}
 try{
 $("importStatus").textContent="Importing playlist…";$("importPlaylist").disabled=true;
