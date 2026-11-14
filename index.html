@@ -52,15 +52,15 @@ $("removeCover").onclick=()=>{setCover(null);$("coverInput").value=""};
 $("copyLink").onclick=async()=>{try{await navigator.clipboard.writeText(location.href+"?playlist="+encodeURIComponent(val("playlistUrl")));alert("Page and playlist link copied (your editable design is not hosted).")}catch(e){alert("Copy not available; use the address bar.")}};
 $("saveProject").onclick=save;$("openProject").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{const p=JSON.parse(await f.text());ids.forEach(id=>{if(p[id]===undefined)return;$(id).type==="checkbox"?$(id).checked=!!p[id]:$(id).value=p[id]});setCover(p.coverData||null);draw()}catch(err){alert("Could not open project JSON.")}};
 $("resetBtn").onclick=()=>{if(confirm("Reset your poster design?"))location.reload()};
-function endpoint(){return ($("apiEndpoint").value.trim()||location.origin).replace(/\\/$/,"")}
+function endpoint(){return ($("apiEndpoint").value.trim()||location.origin).replace(/\/$/,"")}
 $("apiEndpoint").value=localStorage.getItem("skyplay_api_url")|| (location.hostname.endsWith("github.io")?"":location.origin);
 $("apiEndpoint").addEventListener("change",()=>localStorage.setItem("skyplay_api_url",endpoint()));
 const fragment=new URLSearchParams(location.hash.replace(/^#/,""));
 if(fragment.get("skyplay_session")){sessionStorage.setItem("skyplay_session",fragment.get("skyplay_session"));$("importStatus").textContent="Spotify connected! Paste a playlist link, then click Import.";history.replaceState(null,"",location.pathname+location.search)}
 if(fragment.get("skyplay_error")){$("importStatus").textContent="Spotify login failed: "+fragment.get("skyplay_error");history.replaceState(null,"",location.pathname+location.search)}
-$("connectSpotify").onclick=()=>{const api=endpoint();if(!/^https?:\\/\\//.test(api)){ $("importStatus").textContent="Enter the backend URL before connecting.";return}localStorage.setItem("skyplay_api_url",api);location.href=api+"/auth/login"};
+$("connectSpotify").onclick=()=>{const api=endpoint();if(!/^https?:\/\//.test(api)){ $("importStatus").textContent="Enter the backend URL before connecting.";return}localStorage.setItem("skyplay_api_url",api);location.href=api+"/auth/login"};
 $("importPlaylist").onclick=async()=>{
-const url=val("playlistUrl"),m=url.match(/open\\.spotify\\.com\\/playlist\\/([a-zA-Z0-9]+)/);
+const url=val("playlistUrl"),m=url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
 if(!m){$("importStatus").textContent="Enter a valid Spotify playlist URL.";return}
 const api=endpoint(),session=sessionStorage.getItem("skyplay_session");
 if(!session){$("importStatus").textContent="Connect your Spotify account first, using the button above.";return}
@@ -70,7 +70,7 @@ const auth={Authorization:"Bearer "+session};
 const r=await fetch(api+"/api/playlist?url="+encodeURIComponent(url),{headers:auth});
 const d=await r.json();if(!r.ok)throw Error(d.error||"API error "+r.status);
 $("titleInput").value=d.title||"";$("artistInput").value=d.artist||"";
-$("tracksInput").value=(d.tracks||[]).map(t=>typeof t==="string"?t:(t.name||"")+" — "+(t.artist||"")).join("\\n");
+$("tracksInput").value=(d.tracks||[]).map(t=>typeof t==="string"?t:(t.name||"")+" — "+(t.artist||"")).join("\n");
 if(d.image){try{const art=await fetch(api+"/api/artwork?url="+encodeURIComponent(d.image),{headers:auth});if(art.ok){const blob=await art.blob();const rd=new FileReader();rd.onload=()=>setCover(rd.result);rd.readAsDataURL(blob)}}catch(err){console.warn("Artwork could not be imported",err)}}
 $("showLink").checked=true;
 $("importStatus").textContent="Imported "+(d.tracks||[]).length+" tracks. "+((d.total||0)>(d.tracks||[]).length?"Showing first 100 tracks.":"");
