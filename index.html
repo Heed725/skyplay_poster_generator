@@ -125,15 +125,15 @@ $("importStatus").textContent="Backend is online. Spotify credentials: "+(d.spot
 }catch(e){$("importStatus").textContent="Backend check failed: "+e.message}
 };
 const fragment=new URLSearchParams(location.hash.replace(/^#/,""));
-if(fragment.get("skyplay_session")){sessionStorage.setItem("skyplay_session",fragment.get("skyplay_session"));$("importStatus").textContent="Spotify connected! Paste a playlist link, then click Import.";history.replaceState(null,"",location.pathname+location.search)}
+if(fragment.get("skyplay_session")){sessionStorage.setItem("skyplay_session",fragment.get("skyplay_session"));$("importStatus").textContent="Spotify connected! Playlist links will import automatically.";history.replaceState(null,"",location.pathname+location.search)}
 if(fragment.get("skyplay_error")){$("importStatus").textContent="Spotify login failed: "+fragment.get("skyplay_error");history.replaceState(null,"",location.pathname+location.search)}
 $("connectSpotify").onclick=async()=>{const api=endpoint();if(!checkEndpoint(api)){$("importStatus").textContent="Enter the Render backend HTTPS URL first, not a GitHub Pages URL.";return}localStorage.setItem("skyplay_api_url",api);$("importStatus").textContent="Checking backend before Spotify login…";try{const health=await apiJSON(api+"/health");if(!health.ok||!health.spotifyConfigured)throw Error("Spotify credentials are not configured on the backend.");location.href=api+"/auth/login"}catch(e){$("importStatus").textContent="Cannot connect to Spotify: "+e.message}};
-$("importPlaylist").onclick=async()=>{
+$("importPlaylist").onclick=async()=>{clearTimeout(pasteTimer);
 const url=val("playlistUrl"),m=url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
 if(!m){$("importStatus").textContent="Enter a valid Spotify playlist URL.";return}
 const api=endpoint(),session=sessionStorage.getItem("skyplay_session");
 if(!checkEndpoint(api)){$("importStatus").textContent="Enter a valid Render backend URL before importing.";return}
-if(!session){$("importStatus").textContent="Connect your Spotify account first, using the button above.";return}
+if(!session){sessionStorage.setItem("skyplay_pending_playlist",url);$("importStatus").textContent="Connect Spotify once, then your pasted playlist will import automatically.";return}
 try{
 $("importStatus").textContent="Importing playlist…";$("importPlaylist").disabled=true;
 const auth={Authorization:"Bearer "+session};
@@ -145,7 +145,7 @@ if(d.image){try{
 const art=await fetch(api+"/api/artwork?url="+encodeURIComponent(d.image),{headers:auth});
 if(!art.ok){let err={};try{err=await art.json()}catch{}throw Error(err.error||"Artwork service returned "+art.status)}
 const blob=await art.blob();if(!blob.type.startsWith("image/"))throw Error("Artwork response was not an image");
-const rd=new FileReader();rd.onload=()=>setCover(rd.result,true);rd.readAsDataURL(blob);
+await new Promise((resolve,reject)=>{const rd=new FileReader();rd.onload=()=>{setCover(rd.result,true);resolve()};rd.onerror=()=>reject(Error("Could not read artwork image"));rd.readAsDataURL(blob)});
 artworkMessage=" Cover artwork loaded; matching colors will be applied.";
 }catch(err){artworkMessage=" Artwork unavailable: "+err.message;console.warn(err)}
 }else{artworkMessage=" This playlist did not return a cover image."}
@@ -155,6 +155,24 @@ draw();
 }catch(e){$("importStatus").textContent="Import failed: "+e.message}
 finally{$("importPlaylist").disabled=false}
 };
-const q=new URLSearchParams(location.search).get("playlist");if(q)$("playlistUrl").value=q;syncControlLabels();draw();
+
+let pasteTimer=null,lastAutoImport="";
+function isPlaylistLink(url){return /open[.]spotify[.]com[/]playlist[/][A-Za-z0-9]{15,40}/.test(url)||/^spotify:playlist:[A-Za-z0-9]{15,40}/.test(url)}
+function schedulePlaylistImport(delay=650){
+clearTimeout(pasteTimer);const url=val("playlistUrl").trim();if(!isPlaylistLink(url)||url===lastAutoImport)return;
+pasteTimer=setTimeout(()=>{
+if($("importPlaylist").disabled)return;
+lastAutoImport=url;
+if(!sessionStorage.getItem("skyplay_session")){$("importStatus").textContent="Playlist detected. Click Connect Spotify once to authorize import.";sessionStorage.setItem("skyplay_pending_playlist",url);return}
+$("importPlaylist").click()
+},delay)
+}
+$("playlistUrl").addEventListener("paste",()=>schedulePlaylistImport(250));
+$("playlistUrl").addEventListener("input",()=>{lastAutoImport="";schedulePlaylistImport(850)});
+$("playlistUrl").addEventListener("change",()=>schedulePlaylistImport(100));
+const q=new URLSearchParams(location.search).get("playlist"),pending=sessionStorage.getItem("skyplay_pending_playlist");
+if(q)$("playlistUrl").value=q;else if(pending){$("playlistUrl").value=pending;sessionStorage.removeItem("skyplay_pending_playlist")}
+syncControlLabels();draw();if(val("playlistUrl"))schedulePlaylistImport(450);
+
 })();
 </script></body></html>
