@@ -35,7 +35,7 @@ const W=cvs.width,H=cvs.height,margin=Number(val("marginSlider"))/100*W,fg=val("
 ctx.fillStyle=val("bgColor");ctx.fillRect(0,0,W,H);
 if(val("styleSelect")==="frame"){ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.strokeRect(margin*.55,margin*.55,W-margin*1.1,H-margin*1.1)}
 const tracks=val("tracksInput").split("\n").map(s=>s.trim()).filter(Boolean),cols=Number(val("trackCols")),title=val("titleInput")||"Playlist",artist=val("artistInput")||"Artist";
-const titleSize=fit(title,W-2*margin,48*Number(val("fontSlider"))/100),titleY=H-margin-90,artistY=titleY+Number(val("titleGap"));
+const titleSize=fit(title,W-2*margin,48*Number(val("fontSlider"))/100),titleY=H-margin-Math.max(90,Number(val("titleGap"))+Number(val("artistSize"))+43),artistY=titleY+Number(val("titleGap"));
 const artFactor={large:.9,medium:.76,small:.6}[val("artSize")],art=Math.min((W-2*margin)*artFactor,H*.52);
 const ax=(W-art)/2,ay=margin*1.12;
 ctx.fillStyle="#fff";ctx.fillRect(ax,ay,art,art);
@@ -127,7 +127,7 @@ $("importStatus").textContent="Backend is online. Spotify credentials: "+(d.spot
 const fragment=new URLSearchParams(location.hash.replace(/^#/,""));
 if(fragment.get("skyplay_session")){sessionStorage.setItem("skyplay_session",fragment.get("skyplay_session"));$("importStatus").textContent="Spotify connected! Playlist links will import automatically.";history.replaceState(null,"",location.pathname+location.search)}
 if(fragment.get("skyplay_error")){$("importStatus").textContent="Spotify login failed: "+fragment.get("skyplay_error");history.replaceState(null,"",location.pathname+location.search)}
-$("connectSpotify").onclick=async()=>{const api=endpoint();if(!checkEndpoint(api)){$("importStatus").textContent="Enter the Render backend HTTPS URL first, not a GitHub Pages URL.";return}localStorage.setItem("skyplay_api_url",api);$("importStatus").textContent="Checking backend before Spotify login…";try{const health=await apiJSON(api+"/health");if(!health.ok||!health.spotifyConfigured)throw Error("Spotify credentials are not configured on the backend.");location.href=api+"/auth/login"}catch(e){$("importStatus").textContent="Cannot connect to Spotify: "+e.message}};
+$("connectSpotify").onclick=async()=>{const api=endpoint();if(!checkEndpoint(api)){$("importStatus").textContent="Enter the Render backend HTTPS URL first, not a GitHub Pages URL.";return}localStorage.setItem("skyplay_api_url",api);if(isPlaylistLink(val("playlistUrl")))sessionStorage.setItem("skyplay_pending_playlist",val("playlistUrl"));$("importStatus").textContent="Checking backend before Spotify login…";try{const health=await apiJSON(api+"/health");if(!health.ok||!health.spotifyConfigured)throw Error("Spotify credentials are not configured on the backend.");location.href=api+"/auth/login"}catch(e){$("importStatus").textContent="Cannot connect to Spotify: "+e.message}};
 $("importPlaylist").onclick=async()=>{clearTimeout(pasteTimer);
 const url=val("playlistUrl"),m=url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
 if(!m){$("importStatus").textContent="Enter a valid Spotify playlist URL.";return}
