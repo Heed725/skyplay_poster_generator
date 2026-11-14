@@ -55,3 +55,9 @@ Open http://127.0.0.1:3000/ and use http://127.0.0.1:3000/auth/callback as your 
 - `GET /api/artwork?url=...` — permitted Spotify artwork proxy (requires Skyplay session bearer token)
 
 Spotify content must be used in accordance with Spotify's policies, including artwork presentation and attribution. Skyplay is independent of Spotify and Hybridbox.
+
+## Automatic playlist import and poster styling
+
+After connecting Spotify once, simply paste a supported Spotify playlist link into **Create | Order**. Skyplay automatically imports its metadata, track list and cover image and generates complementary colors and a suggested font from the image. If Spotify authentication is needed, connect and return to resume your previously pasted playlist. Spotify's playlist-access restrictions still apply.
+
+Under **Layout & Size**, adjust title size, artist size, track size, track spacing, gap below artwork, title/artist spacing, letter spacing and page margin. **Auto-fit to cover & tracks** chooses a suggested composition; the settings remain editable. Imported artwork uses the Spotify metadata URL with an oEmbed fallback. The Render backend must deploy the newest `main` commit for the fallback to be available.
