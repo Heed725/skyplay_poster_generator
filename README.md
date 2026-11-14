@@ -61,3 +61,7 @@ Spotify content must be used in accordance with Spotify's policies, including ar
 After connecting Spotify once, simply paste a supported Spotify playlist link into **Create | Order**. Skyplay automatically imports its metadata, track list and cover image and generates complementary colors and a suggested font from the image. If Spotify authentication is needed, connect and return to resume your previously pasted playlist. Spotify's playlist-access restrictions still apply.
 
 Under **Layout & Size**, adjust title size, artist size, track size, track spacing, gap below artwork, title/artist spacing, letter spacing and page margin. **Auto-fit to cover & tracks** chooses a suggested composition; the settings remain editable. Imported artwork uses the Spotify metadata URL with an oEmbed fallback. The Render backend must deploy the newest `main` commit for the fallback to be available.
+
+## Latest update: automatic cover and font controls
+
+The existing Spotify OAuth + Render backend remains in place. The compatible website update improves cover load/decode confirmation and automatically extracts matching background, foreground and accent colors after a playlist import or manual image upload. The **Layout & Size** panel includes separate title, artist and track size controls, letter spacing, track spacing, gap below artwork and automatic layout sizing. Paste a playlist link after connecting Spotify to trigger import automatically. The older standalone ZIP's alternate API server was not used because it would break the currently deployed OAuth flow.
